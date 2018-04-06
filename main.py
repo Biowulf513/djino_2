@@ -62,6 +62,7 @@ class LogParser():
 
 class RecordsParser:
     reg_exp = {'sender':r'from=<(\S+)>', 'status':r'status=(\w+)'}
+    all_sender = {}
 
     def __init__(self):
         self.all_records = LogParser.all_log_messages
@@ -86,6 +87,14 @@ class RecordsParser:
             if found_status:
                 status = status_var[found_status[0]]
 
+        self.add_info_to_dict({'sender':sender,'status':status})
+
+    def add_info_to_dict(self, info):
+        if info['sender'] in self.all_sender:
+            self.all_sender[info['sender']].append(info['status'])
+        else:
+            self.all_sender.update({info['sender']:[info['status']]})
+
 
 if __name__ == '__main__':
     parse = LogParser('maillog')
@@ -94,4 +103,5 @@ if __name__ == '__main__':
 
     parse2 = RecordsParser()
     parse2.is_message_over()
+
 
