@@ -9,8 +9,7 @@ __email__ = "cherepanov92@gmail.com"
     1.2 Проверка строки на наличие message_id
         1.2.1 Если message_id встречается впервые создаём словарь или 
             добавляем данные в уже существующий словарь
-        1.2.2 Наличие в строке 2х message_id обозначает провал доставки 
-            второй message_id - сообщение об ошибке (игнорируем его)
+        1.2.2 Второй message_id в строке лога это уведомление(игнорируем его)
             1.2.2.1 Удаляем словарь второго message_id 
     1.3 Поочерёдно парсим словари 
         1.3.1 Наличие в словаре строки 'removed' обозначает окончание 
@@ -26,10 +25,12 @@ __email__ = "cherepanov92@gmail.com"
 3. Результат обработки представить в виде таблицы или отчета. 
     Сохраним конечные данные используя CSV
 '''
-import re
+import re, time
 
 class LogParser():
     reg_exp = {'message_id':r':\s+([0-9A-Z]{11})\W'}
+    notification = []
+    all_log_messages = {}
 
     def __init__(self, filename):
         self.filename = filename
@@ -37,14 +38,31 @@ class LogParser():
     def read_log(self):
         with open(self.filename, mode='r') as f:
             for line in f:
-                message_id = re.findall(self.reg_exp['message_id'], line)
-                if message_id:
-                    self.log_line_analise(message_id, line)
+                id = re.findall(self.reg_exp['message_id'], line)
+                if id:
+                    self.log_line_parsing(dict(id = id, text = line))
 
-    def log_line_analise(self, message_id, line):
-        pass
+    def log_line_parsing(self, message):
+        if len(message['id']) > 1 :
+            self.notification.append(message['id'].pop(1))
+
+        message['id'] = message['id'][0]
+        self.check_record_in_dict(message)
+
+
+    def check_record_in_dict(self, message):
+        if self.all_log_messages.get(message['id']):
+            self.all_log_messages[message['id']].append(message['text'])
+        else:
+            self.all_log_messages.update({message['id']:[message['text']]})
+
+    def clear_all_log_messages(self):
+        for record in self.notification:
+            self.all_log_messages.pop(record)
+
 
 if __name__ == '__main__':
     parse = LogParser('maillog')
     parse.read_log()
+    parse.clear_all_log_messages()
 
