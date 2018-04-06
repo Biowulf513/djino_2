@@ -40,7 +40,7 @@ class LogParser():
             for line in f:
                 id = re.findall(self.reg_exp['message_id'], line)
                 if id:
-                    self.log_line_parsing(dict(id = id, text = line))
+                    self.log_line_parsing(dict(id = id, text = line.rstrip()))
 
     def log_line_parsing(self, message):
         if len(message['id']) > 1 :
@@ -60,9 +60,26 @@ class LogParser():
         for record in self.notification:
             self.all_log_messages.pop(record)
 
+class RecordsParser:
+
+    def __init__(self):
+        self.all_records = LogParser.all_log_messages
+
+    # Если в списке присутствует строчка removed, процес/попытка отправки окончена
+    def is_message_over(self):
+        for one_message in self.all_records:
+            if re.search(r'removed\b',self.all_records[one_message][-1]):
+                self.find_sender_and_status({one_message:self.all_records[one_message]})
+
+    def find_sender_and_status(self, dict):
+        pass
+
 
 if __name__ == '__main__':
     parse = LogParser('maillog')
     parse.read_log()
     parse.clear_all_log_messages()
+
+    parse2 = RecordsParser()
+    parse2.is_message_over()
 
