@@ -61,6 +61,7 @@ class LogParser():
             self.all_log_messages.pop(record)
 
 class RecordsParser:
+    reg_exp = {'sender':r'from=<(\S+)>', 'status':r'status=(\w+)'}
 
     def __init__(self):
         self.all_records = LogParser.all_log_messages
@@ -69,10 +70,21 @@ class RecordsParser:
     def is_message_over(self):
         for one_message in self.all_records:
             if re.search(r'removed\b',self.all_records[one_message][-1]):
-                self.find_sender_and_status({one_message:self.all_records[one_message]})
+                self.find_sender_and_status(self.all_records[one_message])
 
-    def find_sender_and_status(self, dict):
-        pass
+    def find_sender_and_status(self, record_dict):
+        status_var = {'sent': 'access', 'expired': 'denied', 'bounced': 'denied', 'deferred': 'denied'}
+        sender = None
+        status = None
+
+        for line in record_dict:
+            found_sender= re.findall(self.reg_exp['sender'], line)
+            if found_sender:
+                sender = found_sender[0]
+
+            found_status= re.findall(self.reg_exp['status'], line)
+            if found_status:
+                status = status_var[found_status[0]]
 
 
 if __name__ == '__main__':
