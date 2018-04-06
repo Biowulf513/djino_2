@@ -27,3 +27,17 @@ __email__ = "cherepanov92@gmail.com"
     Сохраним конечные данные используя CSV
 '''
 
+class LogParser():
+    def __init__(self, filename):
+        self.filename = filename
+
+    def read_log(self):
+        with open(self.filename, mode='r') as f:
+            for line in f:
+                print(line)
+
+
+if __name__ == '__main__':
+    parse = LogParser('maillog')
+    parse.read_log()
+
