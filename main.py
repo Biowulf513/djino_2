@@ -79,11 +79,11 @@ class RecordsParser:
         status = None
 
         for line in record_dict:
-            found_sender= re.findall(self.reg_exp['sender'], line)
+            found_sender = re.findall(self.reg_exp['sender'], line)
             if found_sender:
                 sender = found_sender[0]
 
-            found_status= re.findall(self.reg_exp['status'], line)
+            found_status = re.findall(self.reg_exp['status'], line)
             if found_status:
                 status = status_var[found_status[0]]
 
@@ -95,6 +95,10 @@ class RecordsParser:
         else:
             self.all_sender.update({info['sender']:[info['status']]})
 
+    def sum_sender_messages(self):
+        for sender in self.all_sender:
+            print(sender, len(self.all_sender[sender]))
+            
 
 if __name__ == '__main__':
     parse = LogParser('maillog')
@@ -103,5 +107,6 @@ if __name__ == '__main__':
 
     parse2 = RecordsParser()
     parse2.is_message_over()
+    parse2.sum_sender_messages()
 
 
