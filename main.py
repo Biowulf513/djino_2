@@ -25,7 +25,7 @@ __email__ = "cherepanov92@gmail.com"
 3. Результат обработки представить в виде таблицы или отчета. 
     Сохраним конечные данные используя CSV
 '''
-import re, time
+import re, csv
 
 class LogParser():
     reg_exp = {'message_id':r':\s+([0-9A-Z]{11})\W'}
@@ -35,6 +35,7 @@ class LogParser():
     def __init__(self, filename):
         self.filename = filename
 
+    # Чиатем данные из файла, передаём информацию о сообщениях в обработку
     def read_log(self):
         with open(self.filename, mode='r') as f:
             for line in f:
@@ -42,6 +43,7 @@ class LogParser():
                 if id:
                     self.log_line_parsing(dict(id = id, text = line.rstrip()))
 
+    # Разбераем словари
     def log_line_parsing(self, message):
         if len(message['id']) > 1 :
             self.notification.append(message['id'].pop(1))
@@ -49,13 +51,16 @@ class LogParser():
         message['id'] = message['id'][0]
         self.check_record_in_dict(message)
 
-
+    # Проверяем существует ли информация с таким-же id
     def check_record_in_dict(self, message):
+        # Если id уникален создаём новую запись
         if self.all_log_messages.get(message['id']):
             self.all_log_messages[message['id']].append(message['text'])
+        # Если id уже есть добовляем информацию к существующей
         else:
             self.all_log_messages.update({message['id']:[message['text']]})
 
+    # Убираем из notification все записи с нормальными письмами
     def clear_all_log_messages(self):
         for record in self.notification:
             self.all_log_messages.pop(record)
@@ -63,16 +68,18 @@ class LogParser():
 class RecordsParser:
     reg_exp = {'sender':r'from=<(\S+)>', 'status':r'status=(\w+)'}
     all_sender = {}
+    sum_sender = {}
 
     def __init__(self):
         self.all_records = LogParser.all_log_messages
 
-    # Если в списке присутствует строчка removed, процес/попытка отправки окончена
+    # Если в списке присутствует строчка removed, процес/попытка отправки окончена, приступаем к обработке
     def is_message_over(self):
         for one_message in self.all_records:
             if re.search(r'removed\b',self.all_records[one_message][-1]):
                 self.find_sender_and_status(self.all_records[one_message])
 
+    # Находим отправителя и статус отправки
     def find_sender_and_status(self, record_dict):
         status_var = {'sent': 'access', 'expired': 'denied', 'bounced': 'denied', 'deferred': 'denied'}
         sender = None
@@ -89,24 +96,63 @@ class RecordsParser:
 
         self.add_info_to_dict({'sender':sender,'status':status})
 
+    # Добавляем информацию в словарь
     def add_info_to_dict(self, info):
         if info['sender'] in self.all_sender:
             self.all_sender[info['sender']].append(info['status'])
         else:
             self.all_sender.update({info['sender']:[info['status']]})
 
-    def sum_sender_messages(self):
+    def collect_sender_messages_info(self):
         for sender in self.all_sender:
-            print(sender, len(self.all_sender[sender]))
-            
+            if sender not in self.sum_sender:
+                self.sum_sender[sender] = {'access':0, 'denied':0}
+            for status in self.all_sender[sender]:
+                self.sum_sender[sender][status] += 1
+
+    def sum_sender_messages_info(self):
+        for sender in self.sum_sender:
+            self.sum_sender[sender]['message_col'] = self.sum_sender[sender]['access'] + self.sum_sender[sender]['denied']
+
+class CSV_convector:
+    def __init__(self):
+        self.sender_statistics = RecordsParser.sum_sender
+
+    def export_sender_stat(self, sender_statistics=None):
+        filename = 'statistics.csv'
+
+        with open(filename, 'w', newline='') as file:
+            writer = csv.writer(file)
+            header = ['sender_email', 'access', 'denied', 'sum_messages']
+            writer.writerow(header)
+
+            for sender in sender_statistics:
+                writer.writerow((sender,
+                                 sender_statistics[sender]['access'],
+                                 sender_statistics[sender]['denied'],
+                                 sender_statistics[sender]['message_col']))
 
 if __name__ == '__main__':
-    parse = LogParser('maillog')
-    parse.read_log()
-    parse.clear_all_log_messages()
+    log = LogParser('maillog')
+    log.read_log()
+    log.clear_all_log_messages()
 
-    parse2 = RecordsParser()
-    parse2.is_message_over()
-    parse2.sum_sender_messages()
+    message_info = RecordsParser()
+    message_info.is_message_over()
+    message_info.collect_sender_messages_info()
+
+    for record in message_info.sum_sender:
+        print(record, end=' | ')
+
+
+    # output_csv = CSV_convector()
+    # output_csv.export_sender_stat()
+
+
+
+
+
+
+
 
 
